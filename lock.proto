@@ -1,0 +1,106 @@
+syntax = "proto3";
+
+package lock_service;
+
+// lock acquire/release arguments, add any fields you want
+message lock_args {
+    int32 client_id = 1;
+}
+
+message lock_rel{
+    int32 client_id = 1;
+    AppendList list = 2;
+}
+
+// field to hold the individual file entries
+message FileAppend {
+  string filename = 1;
+  string value = 2;
+}
+
+// field to hold the append list
+message AppendList {
+  repeated FileAppend entries = 1;
+}
+
+//field to send heartbeats
+message heartbeat_message{
+    int32 term = 1;
+    int32 leader_id = 2;
+}
+
+// server return Status, we will add more in the future
+enum Status {
+    DONTKNOWWHYINEEDTHISHERE = 0;
+    SUCCESS = 1;
+    FILE_ERROR = 2;
+    WAITING_IN_QUEUE = 3;
+    DOES_NOT_HOLD_LOCK = 4;
+    HOLDS_LOCK = 5;
+}
+
+// response struct, adjust or add any fields you want
+message Response {
+    Status status = 1;
+}
+
+// file append arguments, add any fields you want
+message file_args {
+    string filename = 1;
+    bytes content = 2;
+    int32 client_id = 3;
+    string request_id = 4;
+}
+
+// field to hold an int, because the arguments and return values should be "message" type
+message Int {
+    int32 rc = 1;
+    int32 client_id = 2;
+}
+
+// field to pass the last log index
+message last_log_index{
+    int32 index = 1;
+}
+
+// field to hold logs
+message Logs{
+    repeated Log entries = 1;
+}
+
+// field to hold individual log 
+message Log{
+    string action = 1;
+    string content = 2;
+}
+
+// field to return leader id to client
+message leader_response {
+    int32 leader_id = 1;
+}
+
+// field to return empty message
+message emptyMessage{}
+
+
+service LockService {
+    rpc client_init(Int) returns (Int){}
+    rpc client_init_sv(Int) returns (Int){}
+
+    rpc lock_acquire(lock_args) returns (Response){}
+    rpc lock_acquire_sv(Int) returns (Int){}
+
+    rpc lock_release(lock_rel) returns (Response){}
+    rpc lock_release_sv(lock_rel) returns (Int){}
+
+    rpc file_append(file_args) returns (Response){}
+
+    rpc pop_queue_sv(Int) returns (Response){}
+
+    rpc client_close(Int) returns (Int){}
+    rpc client_close_sv(Int) returns (Int){}
+
+    rpc heartbeats(heartbeat_message) returns (emptyMessage){}
+    rpc return_logs(last_log_index) returns (Logs){}
+    rpc announce_leader(emptyMessage) returns (leader_response){}
+}
